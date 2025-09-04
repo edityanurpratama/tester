@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Implementasi Machine Learning Naive Bayes dan KNN dengan Dataset Diabetes - Kelompok 02 5D">
+    <meta name="keywords" content="machine learning, naive bayes, knn, diabetes, dataset, visualization">
+    <meta name="author" content="Kelompok 02 5D">
+    <meta name="theme-color" content="#2c3e50">
+    
+    <title>Micro Project 3 - ML Implementation | Kelompok 02 5D</title>
+    
+    <!-- External Resources -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous">
+    <link rel="stylesheet" href="styles.css">
+    
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>≽^• ˕ • ྀི≼</text></svg>">
+    
+    <!-- Preconnect -->
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+</head>
+<body>
+    <!-- Skip Navigation -->
+    <a href="#main-content" class="skip-nav">Lewati ke konten utama</a>
+    
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="loading-screen" aria-hidden="true">
+        <div class="loading-spinner"></div>
+        <p>Memuat...</p>
+    </div>
+
+    <!-- Keyboard Shortcuts Modal -->
+    <div id="shortcuts-modal" class="modal" role="dialog" aria-labelledby="shortcuts-title" aria-hidden="true">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal('shortcuts-modal')" aria-label="Tutup">&times;</button>
+            <h2 id="shortcuts-title">Pintasan Keyboard</h2>
+            <div class="shortcuts-grid">
+                <div><kbd>D</kbd> Unduh Dataset</div>
+                <div><kbd>I</kbd> Info Dataset</div>
+                <div><kbd>T</kbd> Toggle Tema</div>
+                <div><kbd>S</kbd> Fokus Pencarian</div>
+                <div><kbd>?</kbd> Bantuan Pintasan</div>
+                <div><kbd>Esc</kbd> Tutup Modal</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Area -->
+    <div id="notification" class="notification" aria-live="polite" aria-atomic="true"></div>
+
+    <div class="container">
+        <!-- Header -->
+        <header class="header" role="banner">
+            <div class="header-controls">
+                <button id="theme-toggle" class="btn-icon" aria-label="Toggle tema gelap/terang" title="Toggle Tema (T)">
+                    <i class="fas fa-moon"></i>
+                </button>
+                <button id="shortcuts-btn" class="btn-icon" aria-label="Tampilkan pintasan keyboard" title="Pintasan Keyboard (?)">
+                    <i class="fas fa-keyboard"></i>
+                </button>
+            </div>
+            
+            <h1><i class="fas fa-project-diagram"></i> MICRO PROJECT 3</h1>
+            <p class="subtitle">Implementasi Machine Learning - Kelompok 02 5D</p>
+            
+            <div class="progress-container">
+                <div class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                    <div class="progress-fill" id="progress-fill"></div>
+                </div>
+                <span id="progress-text" class="progress-text">0%</span>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main id="main-content" role="main">
+            <!-- Dataset Section -->
+            <section class="section" id="dataset-section">
+                <h2 class="section-title">
+                    <i class="fas fa-database"></i>
+                    Dataset Diabetes
+                </h2>
+                
+                <!-- Fallback Content (No JS) -->
+                <noscript>
+                    <div class="no-js-fallback">
+                        <p>Dataset diabetes dengan 4 kolom utama:</p>
+                        <table class="simple-table">
+                            <thead>
+                                <tr>
+                                    <th>Glucose</th>
+                                    <th>BloodPressure</th>
+                                    <th>Age</th>
+                                    <th>Diabetes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td>148</td><td>72</td><td>35</td><td>1</td></tr>
+                                <tr><td>85</td><td>66</td><td>29</td><td>0</td></tr>
+                                <tr><td>183</td><td>64</td><td>31</td><td>1</td></tr>
+                                <tr><td>89</td><td>66</td><td>23</td><td>0</td></tr>
+                                <tr><td>137</td><td>40</td><td>35</td><td>1</td></tr>
+                            </tbody>
+                        </table>
+                        <a href="diabetes.csv" class="btn" download="diabetes.csv">
+                            <i class="fas fa-download"></i> Unduh Dataset
+                        </a>
+                    </div>
+                </noscript>
+
+                <!-- Interactive Controls -->
+                <div class="dataset-controls">
+                    <div class="control-group">
+                        <input type="search" id="dataset-search" placeholder="Cari dalam dataset..." 
+                               aria-label="Pencarian dataset" class="search-input">
+                        <button id="clear-search" class="btn-clear" aria-label="Hapus pencarian">&times;</button>
+                    </div>
+                    
+                    <select id="rows-per-page" aria-label="Baris per halaman">
+                        <option value="10">10 baris</option>
+                        <option value="25" selected>25 baris</option>
+                        <option value="50">50 baris</option>
+                        <option value="100">100 baris</option>
+                    </select>
+                </div>
+
+                <!-- Dataset Table -->
+                <div class="table-container">
+                    <table id="dataset-table" class="data-table" role="table">
+                        <thead>
+                            <tr>
+                                <th data-column="glucose" tabindex="0" aria-sort="none">
+                                    Glucose <i class="fas fa-sort"></i>
+                                </th>
+                                <th data-column="bloodpressure" tabindex="0" aria-sort="none">
+                                    BloodPressure <i class="fas fa-sort"></i>
+                                </th>
+                                <th data-column="age" tabindex="0" aria-sort="none">
+                                    Age <i class="fas fa-sort"></i>
+                                </th>
+                                <th data-column="diabetes" tabindex="0" aria-sort="none">
+                                    Diabetes <i class="fas fa-sort"></i>
+                                </th>
+                            </tr>
+                            <tr class="filter-row">
+                                <th>
+                                    <input type="number" placeholder="Min" class="filter-input" data-column="glucose" data-type="min">
+                                    <input type="number" placeholder="Max" class="filter-input" data-column="glucose" data-type="max">
+                                </th>
+                                <th>
+                                    <input type="number" placeholder="Min" class="filter-input" data-column="bloodpressure" data-type="min">
+                                    <input type="number" placeholder="Max" class="filter-input" data-column="bloodpressure" data-type="max">
+                                </th>
+                                <th>
+                                    <input type="number" placeholder="Min" class="filter-input" data-column="age" data-type="min">
+                                    <input type="number" placeholder="Max" class="filter-input" data-column="age" data-type="max">
+                                </th>
+                                <th>
+                                    <select class="filter-input" data-column="diabetes">
+                                        <option value="">Semua</option>
+                                        <option value="0">Tidak Diabetes</option>
+                                        <option value="1">Diabetes</option>
+                                    </select>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody id="dataset-tbody">
+                            <!-- Data akan dimuat dengan JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <div class="pagination" id="pagination" role="navigation" aria-label="Navigasi halaman dataset">
+                    <!-- Kontrol pagination akan ditambahkan dengan JavaScript -->
+                </div>
+
+                <!-- Dataset Actions -->
+                <div class="action-buttons">
+                    <button class="btn btn-primary" onclick="downloadDataset()" title="Unduh Dataset (D)">
+                        <i class="fas fa-download"></i> Unduh CSV
+                    </button>
+                    <button class="btn btn-info" onclick="showDatasetInfo()" title="Info Dataset (I)">
+                        <i class="fas fa-info-circle"></i> Info Dataset
+                    </button>
+                    <label for="csv-upload" class="btn btn-success">
+                        <i class="fas fa-upload"></i> Upload CSV
+                        <input type="file" id="csv-upload" accept=".csv" style="display: none;">
+                    </label>
+                    <button class="btn btn-secondary" onclick="exportToPDF()">
+                        <i class="fas fa-file-pdf"></i> Export PDF
+                    </button>
+                </div>
+            </section>
+
+            <!-- Visualization Section -->
+            <section class="section" id="visualization-section">
+                <h2 class="section-title">
+                    <i class="fas fa-chart-scatter"></i>
+                    Visualisasi Data
+                </h2>
+                
+                <div class="viz-controls">
+                    <div class="control-group">
+                        <label for="x-axis">Sumbu X:</label>
+                        <select id="x-axis">
+                            <option value="glucose">Glucose</option>
+                            <option value="bloodpressure">Blood Pressure</option>
+                            <option value="age">Age</option>
+                        </select>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label for="y-axis">Sumbu Y:</label>
+                        <select id="y-axis">
+                            <option value="age">Age</option>
+                            <option value="glucose">Glucose</option>
+                            <option value="bloodpressure">Blood Pressure</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="chart-container">
+                    <canvas id="scatter-plot" width="800" height="400" 
+                            role="img" aria-label="Scatter plot dataset diabetes"></canvas>
+                    <div id="tooltip" class="tooltip" role="tooltip" aria-hidden="true"></div>
+                </div>
+            </section>
+
+            <!-- Algorithm Demo Section -->
+            <section class="section" id="algorithm-section">
+                <h2 class="section-title">
+                    <i class="fas fa-calculator"></i>
+                    Demo Algoritma Machine Learning
+                </h2>
+                
+                <div class="demo-container">
+                    <div class="demo-inputs">
+                        <h3>Input Data Baru</h3>
+                        
+                        <div class="input-slider">
+                            <label for="demo-glucose">Glucose:</label>
+                            <input type="range" id="demo-glucose" min="50" max="250" value="148">
+                            <span id="glucose-value">148</span>
+                        </div>
+                        
+                        <div class="input-slider">
+                            <label for="demo-bp">Blood Pressure:</label>
+                            <input type="range" id="demo-bp" min="40" max="120" value="72">
+                            <span id="bp-value">72</span>
+                        </div>
+                        
+                        <div class="input-slider">
+                            <label for="demo-age">Age:</label>
+                            <input type="range" id="demo-age" min="20" max="80" value="35">
+                            <span id="age-value">35</span>
+                        </div>
+                        
+                        <div class="algorithm-selector">
+                            <h4>Pilih Algoritma:</h4>
+                            <label class="radio-label">
+                                <input type="radio" name="algorithm" value="nb" checked>
+                                <span>Naive Bayes</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="algorithm" value="knn">
+                                <span>KNN (k = <input type="number" id="k-value" min="1" max="10" value="3">)</span>
+                            </label>
+                        </div>
+                        
+                        <div class="demo-buttons">
+                            <button class="btn btn-primary" onclick="runAlgorithmDemo()">
+                                <i class="fas fa-play"></i> Jalankan Prediksi
+                            </button>
+                            <button class="btn btn-info" onclick="explainAlgorithm()">
+                                <i class="fas fa-question-circle"></i> Penjelasan
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="demo-output">
+                        <h3>Hasil Perhitungan Step-by-Step</h3>
+                        <div id="calculation-steps" class="calculation-display">
+                            <p class="placeholder">Silakan atur input dan klik "Jalankan Prediksi" untuk melihat perhitungan detail.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tasks Section -->
+            <section class="section" id="tasks-section">
+                <h2 class="section-title">
+                    <i class="fas fa-tasks"></i>
+                    Pembagian Tugas Tim
+                </h2>
+                
+                <div class="task-controls">
+                    <button class="btn btn-secondary" onclick="exportTasks()">
+                        <i class="fas fa-download"></i> Export Tasks
+                    </button>
+                    <button class="btn btn-success" onclick="addCustomTask()">
+                        <i class="fas fa-plus"></i> Tambah Tugas
+                    </button>
+                </div>
+                
+                <div class="task-grid" id="task-grid">
+                    <!-- Task board akan dimuat dengan JavaScript -->
+                </div>
+            </section>
+
+            <!-- Timeline Section -->
+            <section class="section" id="timeline-section">
+                <h2 class="section-title">
+                    <i class="fas fa-calendar-alt"></i>
+                    Timeline Target
+                </h2>
+                <div class="timeline" id="timeline">
+                    <!-- Timeline akan dimuat dengan JavaScript -->
+                </div>
+            </section>
+
+            <!-- Communication Section -->
+            <section class="section">
+                <h2 class="section-title">
+                    <i class="fas fa-comments"></i>
+                    Protokol Komunikasi
+                </h2>
+                
+                <div class="communication-grid">
+                    <div class="comm-item">
+                        <div class="comm-icon whatsapp">
+                            <i class="fab fa-whatsapp"></i>
+                        </div>
+                        <h3>WhatsApp Group</h3>
+                        <p>Update progress harian jam 19:00</p>
+                    </div>
+
+                    <div class="comm-item">
+                        <div class="comm-icon github">
+                            <i class="fab fa-github"></i>
+                        </div>
+                        <h3>GitHub</h3>
+                        <p>Version control dan kolaborasi</p>
+                    </div>
+
+                    <div class="comm-item">
+                        <div class="comm-icon drive">
+                            <i class="fab fa-google-drive"></i>
+                        </div>
+                        <h3>Google Drive</h3>
+                        <p>Dokumen dan laporan</p>
+                    </div>
+
+                    <div class="comm-item">
+                        <div class="comm-icon meeting">
+                            <i class="fas fa-video"></i>
+                        </div>
+                        <h3>Video Meeting</h3>
+                        <p>Sinkronisasi rutin</p>
+                    </div>
+                </div>
+
+                <div class="motivation">
+                    <h3><i class="fas fa-rocket"></i> Mari mulai bekerja sekarang!</h3>
+                    <p>Jika ada yang tidak jelas, tanyakan di grup WhatsApp. Semangat! 💪</p>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer" role="contentinfo">
+            <p>&copy; 2023 Micro Project 3 - Kelompok 02 5D</p>
+            <p><small>Progressive Web App • Offline Ready • Accessible Design</small></p>
+        </footer>
+    </div>
+
+    <!-- Scripts -->
+    <script src="app.js"></script>
+    
+    <!-- Service Worker Registration -->
+    <script>
+        // Service Worker registration
+        if ('serviceWorker' in navigator && window.location.protocol === 'https:') {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(registration => {
+                        console.log('SW registered:', registration);
+                    })
+                    .catch(error => {
+                        console.log('SW registration failed:', error);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>
